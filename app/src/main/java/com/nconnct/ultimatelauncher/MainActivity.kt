@@ -32,6 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.platform.LocalContext
@@ -150,7 +153,8 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                     }
                 }
             } else if (drawerOpen && !universalSearchOpen) {
-                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                val drawerCloseNestedScroll = remember { object : NestedScrollConnection { var accumulatedDown = 0f; override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset { if (available.y > 0f) { accumulatedDown += available.y; if (accumulatedDown > 42f) { drawerOpen = false; accumulatedDown = 0f } } else if (available.y < 0f) accumulatedDown = 0f; return androidx.compose.ui.geometry.Offset.Zero } } }
+                Column(Modifier.fillMaxSize().nestedScroll(drawerCloseNestedScroll).statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth().pointerInput(Unit) { var drag = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> drag += amount; if (drag > 30f) { drawerOpen = false; drag = 0f; change.consume() } }, onDragEnd = { drag = 0f }, onDragCancel = { drag = 0f }) }, verticalAlignment = Alignment.CenterVertically) {
                         Text("All apps", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         Text("✕", color = Ink, fontSize = 24.sp, modifier = Modifier.clickable { drawerOpen = false }.padding(8.dp))
