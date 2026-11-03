@@ -1,5 +1,9 @@
 package com.nconnct.ultimatelauncher
 
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,33 +11,67 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+data class LauncherApp(val title: String, val packageName: String, val icon: ImageBitmap)
+
 class MainActivity : ComponentActivity() {
+    private fun drawableBitmap(drawable: Drawable): ImageBitmap {
+        val width = drawable.intrinsicWidth.coerceAtLeast(1)
+        val height = drawable.intrinsicHeight.coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap.asImageBitmap()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        window.decorView.systemUiVisibility =
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        setContent { UltimateLauncherRoot() }
+        window.decorView.systemUiVisibility =  android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+            android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = packageManager.queryIntentActivities(launcherIntent, 0)
+            .mapNotNull { info ->
+                runCatching {
+                    LauncherApp(
+                        info.loadLabel(packageManager).toString(),
+                        info.activityInfo.packageName,
+                        drawableBitmap(info.loadIcon(packageManager))
+                    )
+                }.getOrNull()
+            }
+            .distinctBy { it.packageName }
+            .sortedBy { it.title.lowercase() }
+
+        setContent {
+            UltimateLauncherRoot(
+                apps = apps,
+                launchApp = { pkg -> packageManager.getLaunchIntentForPackage(pkg)?.let { startActivity(it) } }
+            )
+        }
     }
 }
 
@@ -44,87 +82,78 @@ private val GlassEdge = Color(0x66FFFFFF)
 private val Accent = Color(0xFFD0BCFF)
 
 @Composable
-private fun UltimateLauncherRoot() {
-    MaterialTheme(colorScheme = darkColorScheme(
-        background = Color(0xFF17142B),
-        surface = Color(0xFF27223D),
-        primary = Accent,
-        onBackground = Ink
-    )) {
+private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) -> Unit) {
+    var drawerOpen by remember { mutableStateOf(false) }
+    var search by remember { mutableStateOf("") }
+    MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF17142B), surface = Color(0xFF27223D), primary = Accent, onBackground = Ink)) {
         Box(Modifier.fillMaxSize()) {
-            // Ambient wallpaper inspired by Pixel's expressive Material You palette.
-            Box(Modifier.fillMaxSize().background(
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFF242044), Color(0xFF4C3D75), Color(0xFF242D51), Color(0xFF17142B)),
-                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                    end = androidx.compose.ui.geometry.Offset(1000f, 1800f)
-                )
-            ))
-            Box(Modifier.align(Alignment.TopEnd).offset(x = 90.dp, y = 120.dp).size(300.dp)
-                .background(Brush.radialGradient(listOf(Color(0x88D9B8FF), Color.Transparent)), CircleShape))
-            Box(Modifier.align(Alignment.BottomStart).offset(x = (-90).dp, y = 80.dp).size(340.dp)
-                .background(Brush.radialGradient(listOf(Color(0x6649B8D8), Color.Transparent)), CircleShape))
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF242044), Color(0xFF4C3D75), Color(0xFF242D51), Color(0xFF17142B)))))
+            Box(Modifier.align(Alignment.TopEnd).offset(x = 90.dp, y = 120.dp).size(300.dp).background(Brush.radialGradient(listOf(Color(0x88D9B8FF), Color.Transparent)), CircleShape))
+            Box(Modifier.align(Alignment.BottomStart).offset(x = (-90).dp, y = 80.dp).size(340.dp).background(Brush.radialGradient(listOf(Color(0x6649B8D8), Color.Transparent)), CircleShape))
 
-            Column(
-                modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
-                    .padding(horizontal = 22.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column {
-                            Text("MONDAY, NOVEMBER 3", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
-                            Text("2:01", color = Ink, fontSize = 34.sp, fontWeight = FontWeight.Light)
-                        }
-                        FrostedPanel(shape = CircleShape, padding = 13.dp) {
-                            Text("☀️  24°", color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        }
-                    }
-
-                    FrostedPanel(shape = RoundedCornerShape(30.dp), padding = 20.dp) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text("Good afternoon", color = Muted, fontSize = 14.sp)
-                                Text("Your day,\nyour space.", color = Ink, fontSize = 29.sp, lineHeight = 34.sp, fontWeight = FontWeight.Medium)
+            if (!drawerOpen) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column {
+                                Text("YOUR HOME SCREEN", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
+                                Text("Welcome", color = Ink, fontSize = 34.sp, fontWeight = FontWeight.Light)
                             }
-                            Text("✦", color = Accent, fontSize = 50.sp)
+                            FrostedPanel(CircleShape, 13.dp) { Text("✦", color = Accent, fontSize = 24.sp) }
+                        }
+                        FrostedPanel(RoundedCornerShape(30.dp), 20.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Material You • Liquid Glass", color = Muted, fontSize = 14.sp)
+                                    Text("Your apps.\nYour space.", color = Ink, fontSize = 29.sp, lineHeight = 34.sp, fontWeight = FontWeight.Medium)
+                                }
+                                Text("✧", color = Accent, fontSize = 50.sp)
+                            }
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            apps.take(4).forEach { app -> HomeApp(app, launchApp) }
                         }
                     }
-
-                    // Familiar Pixel-style app grid, with glassy icon backplates.
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        AppShortcut("Google", "G", Color(0xFFFAFAFA), Color(0xFF4285F4))
-                        AppShortcut("Photos", "✿", Color(0xFFECE7FF), Color(0xFF8B5CF6))
-                        AppShortcut("Play Store", "▶", Color(0xFFE2F5EE), Color(0xFF16A085))
-                        AppShortcut("Settings", "⚙", Color(0xFFE4E8F5), Color(0xFF52658F))
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        FrostedPanel(RoundedCornerShape(34.dp), 15.dp) {
+                            Row(Modifier.fillMaxWidth().clickable { drawerOpen = true }, verticalAlignment = Alignment.CenterVertically) {
+                                Text("⌕", color = Ink, fontSize = 28.sp)
+                                Spacer(Modifier.width(10.dp))
+                                Text("Search / All apps", color = Muted, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                                Text("↑", color = Ink, fontSize = 22.sp)
+                            }
+                        }
+                        FrostedPanel(RoundedCornerShape(36.dp), 12.dp) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                                apps.take(4).forEach { app -> DockApp(app, launchApp) }
+                            }
+                        }
+                        Text("Tap search to open your app drawer", Modifier.fillMaxWidth().clickable { drawerOpen = true }, textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
                     }
                 }
-
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    FrostedPanel(shape = RoundedCornerShape(34.dp), padding = 15.dp) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("⌕", color = Ink, fontSize = 28.sp)
-                            Spacer(Modifier.width(10.dp))
-                            Text("Search your apps", color = Muted, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                            Text("🎙", fontSize = 20.sp)
-                            Spacer(Modifier.width(12.dp))
-                            Text("Lens", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            } else {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("All apps", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                        Text("✕", color = Ink, fontSize = 24.sp, modifier = Modifier.clickable { drawerOpen = false }.padding(8.dp))
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    FrostedPanel(RoundedCornerShape(28.dp), 14.dp) {
+                        BasicTextField(value = search, onValueChange = { search = it }, singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Ink, fontSize = 16.sp),
+                            decorationBox = { inner -> if (search.isEmpty()) Text("Search installed apps", color = Muted); inner() })
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    val filtered = apps.filter { it.title.contains(search, ignoreCase = true) }
+                    LazyVerticalGrid(columns = GridCells.Fixed(4), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                        items(filtered, key = { it.packageName }) { app ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().clickable { launchApp(app.packageName) }) {
+                                Image(app.icon, app.title, Modifier.size(54.dp))
+                                Spacer(Modifier.height(7.dp))
+                                Text(app.title, color = Ink, fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center)
+                            }
                         }
                     }
-
-                    FrostedPanel(shape = RoundedCornerShape(36.dp), padding = 12.dp) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                            DockIcon("☎", Color(0xFFBCE8D6))
-                            DockIcon("✉", Color(0xFFD9D2FF))
-                            DockIcon("🌐", Color(0xFFBBDFFF))
-                            DockIcon("▣", Color(0xFFFFD7C4))
-                        }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Text("•", color = Ink, fontSize = 18.sp)
-                        Text("  ○  ○", color = Color(0x88FFFFFF), fontSize = 14.sp)
-                    }
-                    Text("Swipe up to explore apps", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
                 }
             }
         }
@@ -132,42 +161,25 @@ private fun UltimateLauncherRoot() {
 }
 
 @Composable
-private fun FrostedPanel(
-    shape: androidx.compose.ui.graphics.Shape,
-    padding: androidx.compose.ui.unit.Dp,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        color = Color.Transparent,
-        shape = shape,
-        modifier = Modifier.border(1.dp, Brush.linearGradient(listOf(GlassEdge, Color(0x22FFFFFF))), shape)
-            .clip(shape)
-    ) {
-        Box(Modifier.background(Brush.linearGradient(listOf(Color(0x44FFFFFF), Glass, Color(0x18FFFFFF)))).padding(padding)) {
-            content()
-        }
+private fun FrostedPanel(shape: androidx.compose.ui.graphics.Shape, padding: androidx.compose.ui.unit.Dp, content: @Composable () -> Unit) {
+    Surface(color = Color.Transparent, shape = shape, modifier = Modifier.border(1.dp, Brush.linearGradient(listOf(GlassEdge, Color(0x22FFFFFF))), shape).clip(shape)) {
+        Box(Modifier.background(Brush.linearGradient(listOf(Color(0x44FFFFFF), Glass, Color(0x18FFFFFF)))).padding(padding)) { content() }
     }
 }
 
 @Composable
-private fun AppShortcut(label: String, glyph: String, backplate: Color, glyphColor: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.width(70.dp).clickable { }) {
-        Box(Modifier.size(58.dp).clip(RoundedCornerShape(21.dp))
-            .background(Brush.linearGradient(listOf(Color(0xCCFFFFFF), backplate.copy(alpha = 0.82f))))
-            .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(21.dp)),
-            contentAlignment = Alignment.Center) {
-            Text(glyph, color = glyphColor, fontSize = 27.sp, fontWeight = FontWeight.Bold)
+private fun HomeApp(app: LauncherApp, launchApp: (String) -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.width(70.dp).clickable { launchApp(app.packageName) }) {
+        Box(Modifier.size(58.dp).clip(RoundedCornerShape(21.dp)).background(Color(0x44FFFFFF)).border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(21.dp)), contentAlignment = Alignment.Center) {
+            Image(app.icon, app.title, Modifier.size(46.dp))
         }
-        Text(label, color = Ink, fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 1)
+        Text(app.title, color = Ink, fontSize = 11.sp, textAlign = TextAlign.Center, maxLines = 1)
     }
 }
 
 @Composable
-private fun DockIcon(glyph: String, tint: Color) {
-    Box(Modifier.size(52.dp).clip(CircleShape)
-        .background(Brush.verticalGradient(listOf(Color(0xCCFFFFFF), tint.copy(alpha = 0.78f))))
-        .border(1.dp, Color(0x66FFFFFF), CircleShape), contentAlignment = Alignment.Center) {
-        Text(glyph, color = Color(0xFF24233A), fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
+private fun DockApp(app: LauncherApp, launchApp: (String) -> Unit) {
+    Box(Modifier.size(52.dp).clip(CircleShape).background(Brush.verticalGradient(listOf(Color(0xCCFFFFFF), Color(0x66FFFFFF)))).border(1.dp, Color(0x66FFFFFF), CircleShape).clickable { launchApp(app.packageName) }, contentAlignment = Alignment.Center) {
+        Image(app.icon, app.title, Modifier.size(38.dp))
     }
 }
