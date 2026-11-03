@@ -168,6 +168,56 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                     }
                 }
             }
+            if (universalSearchOpen) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Universal Search", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                        Text("✕", color = Ink, fontSize = 24.sp, modifier = Modifier.clickable { universalSearchOpen = false }.padding(8.dp))
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    FrostedPanel(RoundedCornerShape(28.dp), 15.dp) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⌕", color = Ink, fontSize = 26.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Box(Modifier.weight(1f)) {
+                                if (universalQuery.isEmpty()) Text("Search apps, contacts, files or the web…", color = Muted, fontSize = 14.sp)
+                                BasicTextField(value = universalQuery, onValueChange = { universalQuery = it; webSubmitted = false }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Ink, fontSize = 15.sp))
+                            }
+                            Text("↵", color = Accent, fontSize = 22.sp, modifier = Modifier.clickable { webSubmitted = true })
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Apps", "Contacts", "Files", "Web").forEach { tab ->
+                            FrostedPanel(RoundedCornerShape(24.dp), 10.dp) {
+                                Text(tab, color = if (universalTab == tab) Accent else Muted, fontSize = 13.sp, modifier = Modifier.clickable { universalTab = tab; webSubmitted = false }.padding(horizontal = 6.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    when (universalTab) {
+                        "Apps" -> {
+                            val matches = apps.filter { it.title.contains(universalQuery, true) }
+                            LazyVerticalGrid(columns = GridCells.Fixed(4), contentPadding = PaddingValues(bottom = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                items(matches, key = { it.packageName }) { app ->
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().clickable { launchApp(app.packageName) }) {
+                                        Image(app.icon, app.title, Modifier.size(50.dp))
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(app.title, color = Ink, fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center)
+                                    }
+                                }
+                            }
+                        }
+                        "Contacts" -> Text("Contact lookup is planned; it will require Contacts permission.", color = Muted, modifier = Modifier.padding(12.dp))
+                        "Files" -> Text("On-device file indexing is planned; storage/media permission support is not enabled yet.", color = Muted, modifier = Modifier.padding(12.dp))
+                        "Web" -> if (webSubmitted && universalQuery.isNotBlank()) {
+                            AndroidView(modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)), factory = { context ->
+                                WebView(context).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webViewClient = WebViewClient(); loadUrl("https://www.google.com/search?q=" + Uri.encode(universalQuery)) }
+                            }, update = { view -> if (view.url?.contains(Uri.encode(universalQuery)) != true) view.loadUrl("https://www.google.com/search?q=" + Uri.encode(universalQuery)) })
+                        } else Text("Type a query and tap ↵ to search the web inside the launcher.", color = Muted, modifier = Modifier.padding(12.dp))
+                    }
+                }
+            }
         }
     }
 }
