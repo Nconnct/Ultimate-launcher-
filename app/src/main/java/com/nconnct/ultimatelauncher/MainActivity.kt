@@ -153,7 +153,28 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                     }
                 }
             } else if (drawerOpen && !universalSearchOpen) {
-                val drawerCloseNestedScroll = remember { object : NestedScrollConnection { var accumulatedDown = 0f; override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset { if (available.y > 0f) { accumulatedDown += available.y; if (accumulatedDown > 42f) { drawerOpen = false; accumulatedDown = 0f } } else if (available.y < 0f) accumulatedDown = 0f; return androidx.compose.ui.geometry.Offset.Zero } } }
+                val drawerCloseNestedScroll = remember {
+                    object : NestedScrollConnection {
+                        var accumulatedDown = 0f
+                        override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                            val downwardDelta = consumed.y + available.y
+                            if (downwardDelta > 0f) {
+                                accumulatedDown += downwardDelta
+                                if (accumulatedDown >= 65f) {
+                                    accumulatedDown = 0f
+                                    drawerOpen = false
+                                }
+                            } else if (downwardDelta < 0f) {
+                                accumulatedDown = 0f
+                            }
+                            return androidx.compose.ui.geometry.Offset.Zero
+                        }
+                        override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                            accumulatedDown = 0f
+                            return androidx.compose.ui.unit.Velocity.Zero
+                        }
+                    }
+                }
                 Column(Modifier.fillMaxSize().nestedScroll(drawerCloseNestedScroll).statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth().pointerInput(Unit) { var drag = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> drag += amount; if (drag > 30f) { drawerOpen = false; drag = 0f; change.consume() } }, onDragEnd = { drag = 0f }, onDragCancel = { drag = 0f }) }, verticalAlignment = Alignment.CenterVertically) {
                         Text("All apps", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
