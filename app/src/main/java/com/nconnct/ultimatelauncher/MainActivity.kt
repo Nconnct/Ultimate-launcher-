@@ -141,7 +141,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         FrostedPanel(RoundedCornerShape(34.dp), 15.dp) {
-                            Row(Modifier.fillMaxWidth().clickable { drawerOpen = true }, verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().clickable { universalSearchOpen = true }, verticalAlignment = Alignment.CenterVertically) {
                                 Text("⌕", color = Ink, fontSize = 28.sp)
                                 Spacer(Modifier.width(10.dp))
                                 Text("Swipe down: Universal Search", color = Muted, fontSize = 16.sp, modifier = Modifier.weight(1f))
@@ -201,6 +201,26 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
             if (activityPageOpen) {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("Activity", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Text("✕", color = Ink, fontSize = 24.sp, modifier = Modifier.clickable { activityPageOpen = false }.padding(8.dp)) }
+                    Spacer(Modifier.height(14.dp))
+                    FrostedPanel(RoundedCornerShape(28.dp), 14.dp) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("⌕", color = Ink, fontSize = 26.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Box(Modifier.weight(1f)) {
+                                if (universalQuery.isEmpty()) Text("Search web, contacts, files, apps…", color = Muted, fontSize = 14.sp)
+                                BasicTextField(value = universalQuery, onValueChange = { universalQuery = it; webSubmitted = false }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Ink, fontSize = 15.sp))
+                            }
+                            Text("↵", color = Accent, fontSize = 22.sp, modifier = Modifier.clickable {
+                                if (universalQuery.isNotBlank()) {
+                                    searchHistory = (listOf(universalQuery.trim()) + searchHistory.filterNot { it.equals(universalQuery.trim(), true) }).take(10)
+                                    webSubmitted = true
+                                    universalTab = "Web"
+                                    universalSearchOpen = true
+                                    activityPageOpen = false
+                                }
+                            })
+                        }
+                    }
                     Spacer(Modifier.height(14.dp))
                     Text("Recent searches", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(8.dp))
