@@ -32,6 +32,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.net.Uri
 
 data class LauncherApp(val title: String, val packageName: String, val icon: ImageBitmap)
 
@@ -85,15 +92,19 @@ private val Accent = Color(0xFFD0BCFF)
 @Composable
 private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) -> Unit) {
     var drawerOpen by remember { mutableStateOf(false) }
+    var universalSearchOpen by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
+    var universalQuery by remember { mutableStateOf("") }
+    var universalTab by remember { mutableStateOf("Apps") }
+    var webSubmitted by remember { mutableStateOf(false) }
     MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF17142B), surface = Color(0xFF27223D), primary = Accent, onBackground = Ink)) {
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF242044), Color(0xFF4C3D75), Color(0xFF242D51), Color(0xFF17142B)))))
             Box(Modifier.align(Alignment.TopEnd).offset(x = 90.dp, y = 120.dp).size(300.dp).background(Brush.radialGradient(listOf(Color(0x88D9B8FF), Color.Transparent)), CircleShape))
             Box(Modifier.align(Alignment.BottomStart).offset(x = (-90).dp, y = 80.dp).size(340.dp).background(Brush.radialGradient(listOf(Color(0x6649B8D8), Color.Transparent)), CircleShape))
 
-            if (!drawerOpen) {
-                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            if (!drawerOpen && !universalSearchOpen) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 12.dp).pointerInput(Unit) { var total = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> total += amount; if (kotlin.math.abs(total) > 65f) { if (total < 0) drawerOpen = true else universalSearchOpen = true; total = 0f; change.consume() } }, onDragEnd = { total = 0f }, onDragCancel = { total = 0f }) }, verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column {
@@ -120,7 +131,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                             Row(Modifier.fillMaxWidth().clickable { drawerOpen = true }, verticalAlignment = Alignment.CenterVertically) {
                                 Text("⌕", color = Ink, fontSize = 28.sp)
                                 Spacer(Modifier.width(10.dp))
-                                Text("Search / All apps", color = Muted, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                                Text("Swipe down: Universal Search", color = Muted, fontSize = 16.sp, modifier = Modifier.weight(1f))
                                 Text("↑", color = Ink, fontSize = 22.sp)
                             }
                         }
@@ -129,7 +140,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                                 apps.take(4).forEach { app -> DockApp(app, launchApp) }
                             }
                         }
-                        Text("Tap search to open your app drawer", Modifier.fillMaxWidth().clickable { drawerOpen = true }, textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
+                        Text("Swipe up for apps • Swipe down for universal search", Modifier.fillMaxWidth().clickable { universalSearchOpen = true }, textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
                     }
                 }
             } else {
