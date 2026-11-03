@@ -113,7 +113,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
             Box(Modifier.align(Alignment.BottomStart).offset(x = (-90).dp, y = 80.dp).size(340.dp).background(Brush.radialGradient(listOf(Color(0x6649B8D8), Color.Transparent)), CircleShape))
 
             if (!drawerOpen && !universalSearchOpen) {
-                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 12.dp).pointerInput(Unit) { var total = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> total += amount; if (kotlin.math.abs(total) > 65f) { if (total < 0) drawerOpen = true else universalSearchOpen = true; total = 0f; change.consume() } }, onDragEnd = { total = 0f }, onDragCancel = { total = 0f }) }, verticalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 12.dp).pointerInput(Unit) { var total = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> total += amount; if (kotlin.math.abs(total) > 65f && kotlin.math.abs(total) > kotlin.math.abs(change.position.x - change.previousPosition.x) * 1.5f) { if (total < 0) drawerOpen = true else universalSearchOpen = true; total = 0f; change.consume() } }, onDragEnd = { total = 0f }, onDragCancel = { total = 0f }) }, verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column {
@@ -156,22 +156,17 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                 val drawerCloseNestedScroll = remember {
                     object : NestedScrollConnection {
                         var accumulatedDown = 0f
-                        override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset {
-                            val downwardDelta = consumed.y + available.y
-                            if (downwardDelta > 0f) {
-                                accumulatedDown += downwardDelta
-                                if (accumulatedDown >= 65f) {
+                        override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                            if (available.y > 0f && kotlin.math.abs(available.y) > kotlin.math.abs(available.x) * 1.25f) {
+                                accumulatedDown += available.y
+                                if (accumulatedDown >= 55f) {
                                     accumulatedDown = 0f
                                     drawerOpen = false
                                 }
-                            } else if (downwardDelta < 0f) {
+                            } else if (available.y < 0f || kotlin.math.abs(available.x) > kotlin.math.abs(available.y)) {
                                 accumulatedDown = 0f
                             }
                             return androidx.compose.ui.geometry.Offset.Zero
-                        }
-                        override suspend fun onPostFling(consumed: androidx.compose.ui.unit.Velocity, available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
-                            accumulatedDown = 0f
-                            return androidx.compose.ui.unit.Velocity.Zero
                         }
                     }
                 }
