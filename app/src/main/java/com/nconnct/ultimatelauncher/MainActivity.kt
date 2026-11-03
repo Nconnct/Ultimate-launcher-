@@ -39,6 +39,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.net.Uri
+import android.app.WallpaperManager
 
 data class LauncherApp(val title: String, val packageName: String, val icon: ImageBitmap)
 
@@ -99,7 +100,11 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
     var webSubmitted by remember { mutableStateOf(false) }
     MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF17142B), surface = Color(0xFF27223D), primary = Accent, onBackground = Ink)) {
         Box(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF242044), Color(0xFF4C3D75), Color(0xFF242D51), Color(0xFF17142B)))))
+            val wallpaperDrawable = remember { runCatching { WallpaperManager.getInstance(LocalContext.current).drawable }.getOrNull() }
+            if (wallpaperDrawable != null) {
+                val wallpaperBitmap = remember(wallpaperDrawable) { val bitmap = Bitmap.createBitmap(wallpaperDrawable.intrinsicWidth.coerceAtLeast(1), wallpaperDrawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888); Canvas(bitmap).also { wallpaperDrawable.setBounds(0, 0, it.width, it.height); wallpaperDrawable.draw(it) }; bitmap.asImageBitmap() }
+                Image(wallpaperBitmap, contentDescription = "Wallpaper", modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            } else Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF242044), Color(0xFF4C3D75), Color(0xFF242D51), Color(0xFF17142B)))))
             Box(Modifier.align(Alignment.TopEnd).offset(x = 90.dp, y = 120.dp).size(300.dp).background(Brush.radialGradient(listOf(Color(0x88D9B8FF), Color.Transparent)), CircleShape))
             Box(Modifier.align(Alignment.BottomStart).offset(x = (-90).dp, y = 80.dp).size(340.dp).background(Brush.radialGradient(listOf(Color(0x6649B8D8), Color.Transparent)), CircleShape))
 
@@ -143,7 +148,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                         Text("Swipe up for apps • Swipe down for universal search", Modifier.fillMaxWidth().clickable { universalSearchOpen = true }, textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
                     }
                 }
-            } else if (drawerOpen) {
+            } else if (drawerOpen && !universalSearchOpen) {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp).pointerInput(Unit) { var drag = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> drag += amount; if (drag > 70f) { drawerOpen = false; drag = 0f; change.consume() } }, onDragEnd = { drag = 0f }, onDragCancel = { drag = 0f }) }) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("All apps", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
