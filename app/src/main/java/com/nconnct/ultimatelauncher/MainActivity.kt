@@ -97,6 +97,10 @@ private val Accent = Color(0xFFD0BCFF)
 private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) -> Unit) {
     var drawerOpen by remember { mutableStateOf(false) }
     var universalSearchOpen by remember { mutableStateOf(false) }
+    var activityPageOpen by remember { mutableStateOf(false) }
+    var recentAppUsage by remember { mutableStateOf(listOf<String>()) }
+    var searchHistory by remember { mutableStateOf(listOf<String>()) }
+    val trackedLaunch: (String) -> Unit = { pkg -> recentAppUsage = (listOf(pkg) + recentAppUsage.filterNot { it == pkg }).take(8); launchApp(pkg) }
     var search by remember { mutableStateOf("") }
     var universalQuery by remember { mutableStateOf("") }
     var universalTab by remember { mutableStateOf("Apps") }
@@ -112,8 +116,8 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
             Box(Modifier.align(Alignment.TopEnd).offset(x = 90.dp, y = 120.dp).size(300.dp).background(Brush.radialGradient(listOf(Color(0x88D9B8FF), Color.Transparent)), CircleShape))
             Box(Modifier.align(Alignment.BottomStart).offset(x = (-90).dp, y = 80.dp).size(340.dp).background(Brush.radialGradient(listOf(Color(0x6649B8D8), Color.Transparent)), CircleShape))
 
-            if (!drawerOpen && !universalSearchOpen) {
-                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 12.dp).pointerInput(Unit) { var total = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> total += amount; if (kotlin.math.abs(total) > 65f && kotlin.math.abs(total) > kotlin.math.abs(change.position.x - change.previousPosition.x) * 1.5f) { if (total < 0) drawerOpen = true else universalSearchOpen = true; total = 0f; change.consume() } }, onDragEnd = { total = 0f }, onDragCancel = { total = 0f }) }, verticalArrangement = Arrangement.SpaceBetween) {
+            if (!drawerOpen && !universalSearchOpen && !activityPageOpen) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 22.dp, vertical = 12.dp).pointerInput(Unit) { var total = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> total += amount; if (kotlin.math.abs(total) > 65f && kotlin.math.abs(total) > kotlin.math.abs(change.position.x - change.previousPosition.x) * 1.5f) { if (total < 0) drawerOpen = true else activityPageOpen = true; total = 0f; change.consume() } }, onDragEnd = { total = 0f }, onDragCancel = { total = 0f }) }, verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column {
@@ -132,7 +136,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                             }
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            apps.take(4).forEach { app -> HomeApp(app, launchApp) }
+                            apps.take(4).forEach { app -> HomeApp(app, trackedLaunch) }
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -146,13 +150,13 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                         }
                         FrostedPanel(RoundedCornerShape(36.dp), 12.dp) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                                apps.take(4).forEach { app -> DockApp(app, launchApp) }
+                                apps.take(4).forEach { app -> DockApp(app, trackedLaunch) }
                             }
                         }
                         Text("Swipe up for apps • Swipe down for universal search", Modifier.fillMaxWidth().clickable { universalSearchOpen = true }, textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
                     }
                 }
-            } else if (drawerOpen && !universalSearchOpen) {
+            } else if (drawerOpen && !universalSearchOpen && !activityPageOpen) {
                 val drawerCloseNestedScroll = remember {
                     object : NestedScrollConnection {
                         var accumulatedDown = 0f
@@ -185,13 +189,28 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                     val filtered = apps.filter { it.title.contains(search, ignoreCase = true) }
                     LazyVerticalGrid(columns = GridCells.Fixed(4), contentPadding = PaddingValues(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         items(filtered, key = { it.packageName }) { app ->
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().clickable { launchApp(app.packageName) }) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().clickable { trackedLaunch(app.packageName) }) {
                                 Image(app.icon, app.title, Modifier.size(54.dp))
                                 Spacer(Modifier.height(7.dp))
                                 Text(app.title, color = Ink, fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center)
                             }
                         }
                     }
+                }
+            }
+            if (activityPageOpen) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Text("Activity", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f)); Text("✕", color = Ink, fontSize = 24.sp, modifier = Modifier.clickable { activityPageOpen = false }.padding(8.dp)) }
+                    Spacer(Modifier.height(14.dp))
+                    Text("Recent searches", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    if (searchHistory.isEmpty()) Text("Your searches will appear here after you search the web.", color = Muted, fontSize = 14.sp)
+                    searchHistory.forEach { entry -> FrostedPanel(RoundedCornerShape(22.dp), 12.dp) { Row(Modifier.fillMaxWidth().clickable { universalQuery = entry; universalTab = "Web"; webSubmitted = true; activityPageOpen = false; universalSearchOpen = true }, verticalAlignment = Alignment.CenterVertically) { Text("⌕", color = Accent, fontSize = 22.sp); Spacer(Modifier.width(10.dp)); Text(entry, color = Ink, fontSize = 14.sp, modifier = Modifier.weight(1f)); Text("↗", color = Muted) } }; Spacer(Modifier.height(7.dp)) }
+                    Spacer(Modifier.height(18.dp))
+                    Text("Recently used apps", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    if (recentAppUsage.isEmpty()) Text("Apps you open will appear here.", color = Muted, fontSize = 14.sp)
+                    recentAppUsage.forEach { pkg -> apps.firstOrNull { it.packageName == pkg }?.let { app -> FrostedPanel(RoundedCornerShape(22.dp), 10.dp) { Row(Modifier.fillMaxWidth().clickable { trackedLaunch(app.packageName) }, verticalAlignment = Alignment.CenterVertically) { Image(app.icon, app.title, Modifier.size(38.dp)); Spacer(Modifier.width(12.dp)); Text(app.title, color = Ink, fontSize = 15.sp, modifier = Modifier.weight(1f)); Text("Open", color = Accent, fontSize = 13.sp) } }; Spacer(Modifier.height(7.dp)) } }
                 }
             }
             if (universalSearchOpen) {
@@ -209,7 +228,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                                 if (universalQuery.isEmpty()) Text("Search apps, contacts, files or the web…", color = Muted, fontSize = 14.sp)
                                 BasicTextField(value = universalQuery, onValueChange = { universalQuery = it; webSubmitted = false }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Ink, fontSize = 15.sp))
                             }
-                            Text("↵", color = Accent, fontSize = 22.sp, modifier = Modifier.clickable { webSubmitted = true; universalTab = "Web" })
+                            Text("↵", color = Accent, fontSize = 22.sp, modifier = Modifier.clickable { webSubmitted = true; universalTab = "Web"; if (universalQuery.isNotBlank()) searchHistory = (listOf(universalQuery.trim()) + searchHistory.filterNot { it.equals(universalQuery.trim(), true) }).take(10) })
                         }
                     }
                     Spacer(Modifier.height(12.dp))
