@@ -121,22 +121,22 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column {
-                                Text("YOUR HOME SCREEN", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
-                                Text("Welcome", color = Ink, fontSize = 34.sp, fontWeight = FontWeight.Light)
+                                Text("TUESDAY", color = Ink, fontSize = 30.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp)
+                                Text("5:09", color = Ink, fontSize = 48.sp, fontWeight = FontWeight.Light)
                             }
                             FrostedPanel(CircleShape, 13.dp) { Text("✦", color = Accent, fontSize = 24.sp) }
                         }
                         FrostedPanel(RoundedCornerShape(30.dp), 20.dp) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    Text("Material You • Liquid Glass", color = Muted, fontSize = 14.sp)
-                                    Text("Your apps.\nYour space.", color = Ink, fontSize = 29.sp, lineHeight = 34.sp, fontWeight = FontWeight.Medium)
+                                    Text("Nov 3  •  Material You", color = Muted, fontSize = 14.sp)
+                                    Text("At a glance", color = Ink, fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.Medium)
                                 }
                                 Text("✧", color = Accent, fontSize = 50.sp)
                             }
                         }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            apps.take(4).forEach { app -> HomeApp(app, trackedLaunch) }
+                        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.height(390.dp), contentPadding = PaddingValues(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                            items(apps.take(12), key = { it.packageName }) { app -> HomeApp(app, trackedLaunch) }
                         }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -144,7 +144,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                             Row(Modifier.fillMaxWidth().clickable { universalSearchOpen = true }, verticalAlignment = Alignment.CenterVertically) {
                                 Text("⌕", color = Ink, fontSize = 28.sp)
                                 Spacer(Modifier.width(10.dp))
-                                Text("Swipe down: Universal Search", color = Muted, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                                Text("Search", color = Muted, fontSize = 16.sp, modifier = Modifier.weight(1f))
                                 Text("↑", color = Ink, fontSize = 22.sp)
                             }
                         }
@@ -153,7 +153,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                                 apps.take(4).forEach { app -> DockApp(app, trackedLaunch) }
                             }
                         }
-                        Text("Swipe up for apps • Swipe down for universal search", Modifier.fillMaxWidth().clickable { universalSearchOpen = true }, textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
+                        Text("Swipe up • All apps     Swipe down • Activity & Search", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color(0x99FFFFFF), fontSize = 12.sp)
                     }
                 }
             } else if (drawerOpen && !universalSearchOpen && !activityPageOpen) {
