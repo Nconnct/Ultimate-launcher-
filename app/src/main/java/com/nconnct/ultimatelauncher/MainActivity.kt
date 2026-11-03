@@ -100,7 +100,8 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
     var webSubmitted by remember { mutableStateOf(false) }
     MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF17142B), surface = Color(0xFF27223D), primary = Accent, onBackground = Ink)) {
         Box(Modifier.fillMaxSize()) {
-            val wallpaperDrawable = remember { runCatching { WallpaperManager.getInstance(LocalContext.current).drawable }.getOrNull() }
+            val context = LocalContext.current
+            val wallpaperDrawable = remember { runCatching { WallpaperManager.getInstance(context).drawable }.getOrNull() }
             if (wallpaperDrawable != null) {
                 val wallpaperBitmap = remember(wallpaperDrawable) { val bitmap = Bitmap.createBitmap(wallpaperDrawable.intrinsicWidth.coerceAtLeast(1), wallpaperDrawable.intrinsicHeight.coerceAtLeast(1), Bitmap.Config.ARGB_8888); Canvas(bitmap).also { wallpaperDrawable.setBounds(0, 0, it.width, it.height); wallpaperDrawable.draw(it) }; bitmap.asImageBitmap() }
                 Image(wallpaperBitmap, contentDescription = "Wallpaper", modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
