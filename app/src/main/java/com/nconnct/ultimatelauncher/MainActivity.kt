@@ -33,6 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.ui.input.pointer.awaitPointerEventScope
+import androidx.compose.ui.input.pointer.awaitFirstDown
+import androidx.compose.ui.input.pointer.consume
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -150,7 +155,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                     }
                 }
             } else if (drawerOpen && !universalSearchOpen) {
-                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp).pointerInput(Unit) { var drag = 0f; detectVerticalDragGestures(onVerticalDrag = { change, amount -> drag += amount; if (drag > 70f) { drawerOpen = false; drag = 0f; change.consume() } }, onDragEnd = { drag = 0f }, onDragCancel = { drag = 0f }) }) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("All apps", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         Text("✕", color = Ink, fontSize = 24.sp, modifier = Modifier.clickable { drawerOpen = false }.padding(8.dp))
@@ -189,7 +194,7 @@ private fun UltimateLauncherRoot(apps: List<LauncherApp>, launchApp: (String) ->
                                 if (universalQuery.isEmpty()) Text("Search apps, contacts, files or the web…", color = Muted, fontSize = 14.sp)
                                 BasicTextField(value = universalQuery, onValueChange = { universalQuery = it; webSubmitted = false }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Ink, fontSize = 15.sp))
                             }
-                            Text("↵", color = Accent, fontSize = 22.sp, modifier = Modifier.clickable { webSubmitted = true })
+                            Text("↵", color = Accent, fontSize = 22.sp, modifier = Modifier.clickable { webSubmitted = true; universalTab = "Web" })
                         }
                     }
                     Spacer(Modifier.height(12.dp))
